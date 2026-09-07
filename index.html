@@ -32,19 +32,19 @@ body {
 </style>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-#game-root { width: 100%; background: #0a0a1a; font-family: 'Courier New', monospace; user-select: none; position: relative; overflow: hidden; }
-#canvas { display: block; width: 100%; }
-#btn-bar { position: absolute; bottom: 0; left: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 5px 8px; background: rgba(0,0,0,0.85); gap: 4px; }
-.btn { padding: 7px 10px; font-family: 'Courier New', monospace; font-size: 10px; font-weight: bold; border: 2px solid; cursor: pointer; border-radius: 4px; background: #111; color: #fff; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-.btn-move { border-color: #555; color: #ccc; font-size: 13px; }
-.btn-move:active { background: #333; }
-.btn-resume { border-color: #48f; color: #8cf; }
-.btn-resume:active { background: #224; }
-.btn-greet { border-color: #4d8; color: #8fb; }
-.btn-greet:active { background: #142; }
-.btn-home { border-color: #888; color: #aaa; font-size: 13px; }
-.btn-home:active { background: #333; }
-.hud-bar { position: absolute; top: 0; left: 0; width: 100%; display: flex; justify-content: space-between; padding: 5px 8px; background: rgba(0,0,0,0.75); color: #fff; font-size: 10px; pointer-events: none; }
+#game-root { width: 100%; background: #0a0a1a; font-family: 'Courier New', monospace; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation; position: relative; overflow: hidden; }
+#canvas { display: block; width: 100%; touch-action: none; }
+#btn-bar { position: absolute; bottom: 0; left: 0; width: 100%; height: 64px; display: flex; gap: 6px; padding: 6px 8px; background: rgba(0,0,0,0.85); }
+.fire { flex: 1; font-family: 'Courier New', monospace; font-weight: bold; font-size: 17px; letter-spacing: 1px; border: 2px solid; border-radius: 8px; background: #111; color: #fff; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.fire small { display: block; font-size: 9px; font-weight: normal; letter-spacing: 0; opacity: 0.65; margin-top: 3px; }
+.fire-resume { border-color: #fd0; color: #fd0; }
+.fire-resume:active, .fire-resume.held { background: #332800; }
+.fire-greet { border-color: #48f; color: #8cf; }
+.fire-greet:active, .fire-greet.held { background: #0a1a33; }
+.icon-btn { width: 30px; height: 24px; padding: 0; line-height: 1; font-size: 13px; font-family: 'Courier New', monospace; background: #111; border: 1px solid #555; color: #aaa; border-radius: 4px; cursor: pointer; pointer-events: auto; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.icon-btn:active { background: #333; }
+.hud-bar .icons { display: flex; gap: 4px; pointer-events: auto; }
+.hud-bar { position: absolute; top: 0; left: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; background: rgba(0,0,0,0.75); color: #fff; font-size: 10px; pointer-events: none; }
 #screen-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; overflow-y: auto; color: #fff; font-family: 'Courier New', monospace; padding: 12px 16px 16px; }
 .start-btn { margin-top: 12px; padding: 10px 28px; background: #fd0; color: #000; border: none; font-family: 'Courier New', monospace; font-weight: bold; font-size: 14px; cursor: pointer; border-radius: 4px; }
 .start-btn:active { background: #ca0; }
@@ -61,22 +61,13 @@ table.lb tr.me td { color: #4f8; }
   <canvas id="canvas"></canvas>
   <div class="hud-bar">
     <span>APPS: <span id="hud-apps" style="color:#8cf">0</span></span>
-    <span>NETWORK: <span id="hud-net" style="color:#8fb">0</span>/49</span>
+    <span>NETWORK: <span id="hud-net" style="color:#8fb">0</span>/<span id="hud-net-max">10</span></span>
     <span>TIME: <span id="hud-time" style="color:#fda">0:00</span></span>
+    <span class="icons"><button class="icon-btn" id="btn-mute" title="Sound on (M)">&#9834;</button><button class="icon-btn" id="btn-home" title="Home">&#8962;</button></span>
   </div>
   <div id="btn-bar">
-    <div style="display:flex;gap:4px">
-      <button class="btn btn-move" id="btn-left">&#9664;</button>
-      <button class="btn btn-move" id="btn-right">&#9654;</button>
-    </div>
-    <div style="display:flex;gap:4px">
-      <button class="btn btn-resume" id="btn-resume">O RESUME</button>
-      <button class="btn btn-greet" id="btn-greet">L GREET</button>
-    </div>
-    <div style="display:flex;gap:4px">
-      <button class="btn btn-home" id="btn-mute" title="Sound on (M)">&#9834;</button>
-      <button class="btn btn-home" id="btn-home">&#8962;</button>
-    </div>
+    <button class="fire fire-resume" id="btn-resume">RESUME<small>hold to repeat &middot; key O</small></button>
+    <button class="fire fire-greet" id="btn-greet">GREET<small>hold to repeat &middot; key L</small></button>
   </div>
   <div id="screen-overlay"></div>
 </div>
@@ -91,8 +82,11 @@ const hudApps = document.getElementById('hud-apps');
 const hudNet  = document.getElementById('hud-net');
 const hudTime = document.getElementById('hud-time');
 
-const BTN_H = 48;
+const BTN_H = 64;
 const CONVERT_ODDS = 4;
+const NETWORK_MAX = 10;      // max allies on screen
+const NETWORK_STRONG = 4;    // allies needed for the "networked AND applied" verdict
+document.getElementById('hud-net-max').textContent=NETWORK_MAX;
 let W, H, gameRunning = false;
 let startTime = 0, elapsedMs = 0;
 let applications = 0, network = 0, greetingShots = 0;
@@ -100,7 +94,8 @@ let player = { x:0, y:0, w:36, h:42, speed:200, state:'idle', stateTimer:0 };
 let bullets=[], jobs=[], contacts=[], particles=[], messages=[];
 let leaderboard=[];
 let spawnTimer=0, allyFireTimer=0;
-let keys={left:false,right:false}, moveHeld={left:false,right:false};
+let keys={left:false,right:false};
+let dragId=null, dragX=null;   // touch/mouse drag on the field: player follows the finger's x
 let lastTs=0;
 let allyPatrolDir=1, allyPatrolX=20;
 let hiredSequence=false, hiredTarget=null, hiredType=null, hiredTimer=0;
@@ -166,7 +161,10 @@ document.addEventListener('visibilitychange',()=>{ if(!actx)return; try{ if(docu
 
 function resize(){
   W=root.clientWidth;
-  H=Math.min(Math.round(W*1.15),500);
+  const avail=(window.innerHeight||0)-16;
+  // phones: use up to 1.6x the width (as much of the screen as fits); wide panes keep the classic 1.15x, max 500
+  if(W<600&&avail>0) H=Math.max(Math.round(W*1.15),Math.min(Math.round(W*1.6),avail));
+  else H=Math.min(Math.round(W*1.15),500);
   const dpr=Math.min(window.devicePixelRatio||1,3);
   canvas.width=Math.round(W*dpr); canvas.height=Math.round(H*dpr);
   canvas.style.height=H+'px';
@@ -218,9 +216,8 @@ function showStartScreen(){
       <div style="font-size:11px;color:#fa8;margin-bottom:14px;font-style:italic">The Job Search. Gamified.</div>
       <div style="background:#111;border:1px solid #333;border-radius:6px;padding:10px 14px;margin-bottom:10px;text-align:left;font-size:10px;line-height:1.7;color:#ccc">
         <div style="color:#fd0;font-size:11px;margin-bottom:4px">CONTROLS</div>
-        <div><span style="color:#8cf">O</span> = Shoot Resume &nbsp;|&nbsp; <span style="color:#8fb">L</span> = Greet Contacts</div>
-        <div>Arrow keys (or ◄ ► buttons) to move</div>
-        <div><span style="color:#aaa">M</span> (or &#9834;) = Sound on/off</div>
+        <div><span style="color:#fff">Touch:</span> drag anywhere on the field to move. Tap <span style="color:#fd0">RESUME</span> or <span style="color:#8cf">GREET</span> to fire; hold to keep firing.</div>
+        <div><span style="color:#fff">Keyboard:</span> &larr; &rarr; move &nbsp;|&nbsp; <span style="color:#fd0">O</span> = Resume &nbsp;|&nbsp; <span style="color:#8cf">L</span> = Greet &nbsp;|&nbsp; M = Sound</div>
       </div>
       <div style="background:#111;border:1px solid #333;border-radius:6px;padding:10px 14px;margin-bottom:10px;text-align:left;font-size:10px;line-height:1.7;color:#ccc">
         <div style="color:#fd0;font-size:11px;margin-bottom:4px">LEGEND</div>
@@ -247,7 +244,7 @@ function showHiredScreen(apps,n,t,ms){
   const greetRatio=greetingShots/Math.max(greetingShots+apps,1);
   const resumeRatio=apps/Math.max(greetingShots+apps,1);
   let commentary='';
-  if(n>=10&&resumeRatio>=0.3){
+  if(n>=NETWORK_STRONG&&resumeRatio>=0.3){
     commentary="That's how it's done. You networked AND applied strategically. That's the move.";
   } else if(n<3&&resumeRatio>0.7){
     commentary="Next time, try greeting contacts — a strong network multiplies your chances exponentially.";
@@ -368,7 +365,7 @@ function startGame(){
   player.x=W/2;player.state='idle';player.stateTimer=0;
   gameRunning=true;startTime=Date.now();
   unlockAudio(); startMusic();
-  hudApps.textContent='0';hudNet.textContent='0/49';hudTime.textContent='0:00';
+  hudApps.textContent='0';hudNet.textContent='0';hudTime.textContent='0:00';
 }
 function updateAllyPatrol(dt){
   const allies=getAllies();if(!allies.length)return;
@@ -400,8 +397,9 @@ function update(dt){
   const totalSec=Math.floor(elapsedMs/1000);
   hudTime.textContent=Math.floor(totalSec/60)+':'+String(totalSec%60).padStart(2,'0');
   const spd=player.speed*dt;
-  if(keys.left||moveHeld.left)   player.x=Math.max(player.w/2,player.x-spd);
-  if(keys.right||moveHeld.right) player.x=Math.min(W-player.w/2,player.x+spd);
+  if(keys.left)  player.x=Math.max(player.w/2,player.x-spd);
+  if(keys.right) player.x=Math.min(W-player.w/2,player.x+spd);
+  if(dragX!==null){ const tx=Math.max(player.w/2,Math.min(W-player.w/2,dragX)); player.x+=(tx-player.x)*Math.min(1,dt*25); }
   spawnTimer+=dt*1000;if(spawnTimer>1700){spawnTimer=0;spawnWave();}
   allyFireTimer+=dt*1000;
   const allies=getAllies();
@@ -454,7 +452,7 @@ function update(dt){
         if(c.dead||b.dead||c.state!=='falling')return;
         if(collides(b.x,b.y,b.w,b.h,c.x,c.y,c.w,c.h)){
           b.dead=true;
-          if(network<49&&chance(CONVERT_ODDS)){network++;hudNet.textContent=network+'/49';spawnParticles(c.x,c.y,'#4d8',10);spawnMessage(c.x,c.y-8,'Connected!','#4f8');c.state='joining';}
+          if(network<NETWORK_MAX&&chance(CONVERT_ODDS)){network++;hudNet.textContent=network;spawnParticles(c.x,c.y,'#4d8',10);spawnMessage(c.x,c.y-8,'Connected!','#4f8');c.state='joining';}
           else{spawnMessage(c.x,c.y-8,'Ghosted','#88a');makeGhostContact(c);}
         }
       });
@@ -597,6 +595,11 @@ requestAnimationFrame(loop);
 showTitleScreen();
 
 document.addEventListener('keydown',e=>{
+  const t=e.target;
+  if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable)){
+    if(e.key==='Enter'){const b=document.getElementById('submit-btn');if(b&&b.style.display!=='none'){e.preventDefault();b.click();}}
+    return; // typing a name: don't treat O, L, M, arrows or Enter as game keys
+  }
   if(e.key==='ArrowLeft'){e.preventDefault();keys.left=true;}
   if(e.key==='ArrowRight'){e.preventDefault();keys.right=true;}
   if(e.key==='o'||e.key==='O'){e.preventDefault();shootResume();}
@@ -608,13 +611,31 @@ document.addEventListener('keyup',e=>{
   if(e.key==='ArrowLeft')keys.left=false;
   if(e.key==='ArrowRight')keys.right=false;
 });
-const btnL=document.getElementById('btn-left');
-const btnR=document.getElementById('btn-right');
-btnL.addEventListener('pointerdown',()=>{moveHeld.left=true;});['pointerup','pointerleave','pointercancel'].forEach(ev=>btnL.addEventListener(ev,()=>{moveHeld.left=false;}));
-btnR.addEventListener('pointerdown',()=>{moveHeld.right=true;});['pointerup','pointerleave','pointercancel'].forEach(ev=>btnR.addEventListener(ev,()=>{moveHeld.right=false;}));
+// Drag anywhere on the field to move (touch or mouse)
+function fieldX(e){const r=canvas.getBoundingClientRect();return (e.clientX-r.left)*(W/(r.width||W));}
+canvas.addEventListener('pointerdown',e=>{
+  if(!gameRunning)return;
+  dragId=e.pointerId; dragX=fieldX(e); e.preventDefault();
+  try{canvas.setPointerCapture(e.pointerId);}catch(err){}
+});
+canvas.addEventListener('pointermove',e=>{ if(e.pointerId===dragId) dragX=fieldX(e); });
+['pointerup','pointercancel'].forEach(ev=>canvas.addEventListener(ev,e=>{ if(e.pointerId===dragId){dragId=null;dragX=null;} }));
+// Fire buttons: tap fires once, hold repeats
+function bindFire(btn,fire){
+  let timer=null;
+  const stop=()=>{ if(timer){clearInterval(timer);timer=null;} btn.classList.remove('held'); };
+  btn.addEventListener('pointerdown',e=>{
+    e.preventDefault();
+    try{btn.setPointerCapture(e.pointerId);}catch(err){}
+    stop(); fire(); btn.classList.add('held');
+    timer=setInterval(fire,170);
+    if(e.pointerType==='touch'&&navigator.vibrate){ try{navigator.vibrate(8);}catch(err){} }
+  });
+  ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>btn.addEventListener(ev,stop));
+}
+bindFire(document.getElementById('btn-resume'),shootResume);
+bindFire(document.getElementById('btn-greet'),shootGreet);
 root.addEventListener('contextmenu',e=>e.preventDefault());
-document.getElementById('btn-resume').addEventListener('pointerdown',e=>{e.preventDefault();shootResume();});
-document.getElementById('btn-greet').addEventListener('pointerdown',e=>{e.preventDefault();shootGreet();});
 document.getElementById('btn-mute').addEventListener('click',()=>{setMuted(!muted);});
 document.getElementById('btn-home').addEventListener('click',()=>{gameRunning=false;hiredSequence=false;showStartScreen();});
 })();
